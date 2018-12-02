@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Schematic.BaseInfrastructure.Sqlite</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Ronan Doherty</Authors>
     <PackageProjectUrl>https://github.com/rodoch/Schematic.BaseInfrastructure.Sqlite/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rodoch/Schematic.BaseInfrastructure.Sqlite/</RepositoryUrl>

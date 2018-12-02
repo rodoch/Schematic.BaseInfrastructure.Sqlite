@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Dapper
 {
-    public class SqlBuilder
+    internal class SqlBuilder
     {
         private readonly Dictionary<string, Clauses> _data = new Dictionary<string, Clauses>();
         private int _seq;
