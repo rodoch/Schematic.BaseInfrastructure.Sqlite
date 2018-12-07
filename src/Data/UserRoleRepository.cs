@@ -14,40 +14,24 @@ namespace Schematic.BaseInfrastructure.Sqlite
 {
     public class UserRoleRepository : IUserRoleRepository<UserRole>
     {
-        private readonly string ConnectionString;
-        private static readonly string UserRolesCacheKey = CacheKeys.UserRolesCacheKey;
-        
-        private readonly IConfiguration Configuration;
-        private readonly IMemoryCache MemoryCache;
+        protected readonly IConfiguration Configuration;
+        protected readonly string ConnectionString;
 
-        public UserRoleRepository(
-            IConfiguration configuration,
-            IMemoryCache memoryCache)
+        public UserRoleRepository(IConfiguration configuration)
         {
             Configuration = configuration;
-            MemoryCache = memoryCache;
             ConnectionString = Configuration.GetConnectionString("Sqlite");
         }
 
-        public async Task<List<UserRole>> List()
+        public async Task<List<UserRole>> ListAsync()
         {
-            if (!MemoryCache.TryGetValue(UserRolesCacheKey, out List<UserRole> cacheEntry))
+            const string sql = @"SELECT * FROM UserRoles ORDER BY DisplayTitle, Name";
+
+            using (IDbConnection db = new SqliteConnection(ConnectionString))
             {
-                var cacheEntryOptions = new MemoryCacheEntryOptions() 
-                    .SetSize(1) 
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(3));
-
-                const string sql = @"SELECT * FROM UserRoles ORDER BY DisplayTitle, Name";
-
-                using (IDbConnection db = new SqliteConnection(ConnectionString))
-                {
-                    var roles = await db.QueryAsync<UserRole>(sql);
-                    cacheEntry = roles.ToList();
-                    MemoryCache.Set(UserRolesCacheKey, cacheEntry, cacheEntryOptions);
-                }
+                var roles = await db.QueryAsync<UserRole>(sql);
+                return roles.ToList();
             }
-
-            return cacheEntry;
         }
     }
 }

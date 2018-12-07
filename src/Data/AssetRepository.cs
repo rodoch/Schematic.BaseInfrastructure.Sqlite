@@ -17,7 +17,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
             _connectionString = configuration.GetConnectionString("Sqlite");
         }
 
-        public async Task<int> Create(Asset asset, int userID)
+        public async Task<int> CreateAsync(Asset asset, int userID)
         {
             const string sql = @"INSERT INTO Assets (FileName, ContentType, Title, DateCreated, CreatedBy) 
                 VALUES (@FileName, @ContentType, @Title, @DateCreated, @CreatedBy);
@@ -31,7 +31,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<int> Delete(int id, int userID)
+        public async Task<int> DeleteAsync(int id, int userID)
         {
             const string sql = @"DELETE FROM Assets WHERE ID = @ID";
 
@@ -41,7 +41,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<Asset> Read(int id)
+        public async Task<Asset> ReadAsync(int id)
         {
             const string sql = @"SELECT * FROM Assets WHERE FileName = @FileName LIMIT 1";
 
@@ -52,7 +52,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<int> Update(Asset asset, int userID)
+        public async Task<int> UpdateAsync(Asset asset, int userID)
         {
             const string sql = @"UPDATE SET FileName = @FileName, ContentType = @ContentType, Title = @Title 
                 WHERE ID = @ID";

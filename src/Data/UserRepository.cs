@@ -8,31 +8,30 @@ using Microsoft.Extensions.Configuration;
 using Dapper;
 using Schematic.Core;
 using Schematic.Identity;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Schematic.BaseInfrastructure.Sqlite
 {
     public class UserRepository : IUserRepository<User, UserFilter>
     {
-        protected readonly IConfiguration Configuration;
-        protected readonly ISchematicSettings Settings;
-        protected readonly IUserRoleRepository<UserRole> RoleRepository;
+        private readonly ISchematicSettings _settings;
+        private readonly IUserRoleRepository<UserRole> _roleRepository;
         
-        protected readonly string ConnectionString;
+        private readonly string _connectionString;
 
         public UserRepository(
             IConfiguration configuration,
             ISchematicSettings settings,
             IUserRoleRepository<UserRole> roleRepository)
         {
-            Configuration = configuration;
-            Settings = settings;
-            RoleRepository = roleRepository;
-            ConnectionString = Configuration.GetConnectionString("Sqlite");
+            _settings = settings;
+            _roleRepository = roleRepository;
+            _connectionString = configuration.GetConnectionString("Sqlite");
         }
 
-        public async Task<int> Create(User resource, string token, int userID)
+        public async Task<int> CreateAsync(User resource, string token, int userID)
         {
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 db.Open();
 
@@ -65,20 +64,20 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<User> Read(int id)
+        public async Task<User> ReadAsync(int id)
         {
             const string sql = @"SELECT * FROM Users WHERE ID = @ID;
                 SELECT r.ID FROM UserRoles AS r
                 LEFT JOIN UsersUserRole AS ur ON ur.RoleID = r.ID 
                 WHERE ur.UserID = @ID;";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 using (var multi = await db.QueryMultipleAsync(sql, new { ID = id }))
                 {
                     var user = multi.Read<User>().FirstOrDefault();
                     var userRoles = multi.Read<int>().ToList();
-                    var roles = await RoleRepository.List();
+                    var roles = await _roleRepository.ListAsync();
 
                     foreach (var role in roles)
                     {
@@ -97,14 +96,14 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<User> ReadByEmail(string email)
+        public async Task<User> ReadByEmailAsync(string email)
         {
             const string userSql = @"SELECT * FROM Users WHERE Email = @Email";
             const string roleSql = @"SELECT r.ID FROM UserRoles AS r 
                 LEFT JOIN UsersUserRole AS ur ON ur.RoleID = r.ID 
                 WHERE ur.UserID = @ID";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {   
                 var readUser = await db.QueryAsync<User>(userSql, new { Email = email });
                 var user = readUser.FirstOrDefault();
@@ -112,7 +111,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
                 if (user != null)
                 {
                     var userRoles = await db.QueryAsync<int>(roleSql, new { ID = user.ID });
-                    var roles = await RoleRepository.List();
+                    var roles = await _roleRepository.ListAsync();
 
                     foreach (var role in roles)
                     {
@@ -131,13 +130,13 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<int> Update(User resource, int userID)
+        public async Task<int> UpdateAsync(User resource, int userID)
         {
             const string sql = @"UPDATE Users 
                 SET Forenames = @Forenames, Surnames = @Surnames, Email = @Email, PassHash = @PassHash WHERE ID = @ID;
                 DELETE FROM UsersUserRole WHERE UserID = @ID;";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 db.Open();
 
@@ -159,17 +158,17 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<int> Delete(int id, int userID)
+        public async Task<int> DeleteAsync(int id, int userID)
         {
             const string sql = @"DELETE FROM Users WHERE ID = @ID";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 return await db.ExecuteAsync(sql, new { ID = id });
             }
         }
 
-        public async Task<List<User>> List(UserFilter filter)
+        public async Task<List<User>> ListAsync(UserFilter filter)
         {
             var builder = new SqlBuilder();
 
@@ -183,7 +182,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
                 builder.OrWhere("Surnames LIKE @Query");
             }
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 var users = await db.QueryAsync<User>(template.RawSql, 
                     new { Query = filter.SearchQuery + "%" });
@@ -191,12 +190,12 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<bool> SaveToken(User resource, string token)
+        public async Task<bool> SaveTokenAsync(User resource, string token)
         {
             const string sql = @"INSERT INTO UsersPasswordToken (UserID, Email, Token, NotificationsSent, DateCreated) 
                 VALUES (@UserID, @Email, @Token, @NotificationsSent, @DateCreated)";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 var tokenSaved = await db.ExecuteAsync(sql, new { UserID = resource.ID, Email = resource.Email, Token = token, 
                     NotificationsSent = 0, DateCreated = DateTime.UtcNow });
@@ -204,12 +203,12 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<TokenVerificationResult> ValidateToken(string email, string token)
+        public async Task<TokenVerificationResult> ValidateTokenAsync(string email, string token)
         {
             const string sql = @"SELECT ID, DateCreated FROM UsersPasswordToken 
                 WHERE Email = @Email AND Token = @Token LIMIT 1";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 var result = await db.QueryAsync(sql, new { Email = email, Token = token });
                 var tokenResult = result.FirstOrDefault();
@@ -221,7 +220,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
 
                 var timeCreated = DateTime.Parse(tokenResult.DateCreated);
 
-                if (timeCreated < DateTime.UtcNow.Subtract(TimeSpan.FromHours(Settings.SetPasswordTimeLimitHours)))
+                if (timeCreated < DateTime.UtcNow.Subtract(TimeSpan.FromHours(_settings.SetPasswordTimeLimitHours)))
                 {
                     return TokenVerificationResult.Expired;
                 }
@@ -232,11 +231,11 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<bool> SetPassword(User resource, string passHash)
+        public async Task<bool> SetPasswordAsync(User resource, string passHash)
         {
             const string sql = @"UPDATE Users SET PassHash = @PassHash WHERE ID = @ID";
 
-            using (var db = new SqliteConnection(ConnectionString))
+            using (var db = new SqliteConnection(_connectionString))
             {
                 var passwordSet = await db.ExecuteAsync(sql, new { ID = resource.ID, PassHash = passHash });
                 return (passwordSet > 0) ? true : false; 
