@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Schematic.BaseInfrastructure.Sqlite</PackageId>
-    <Version>0.1.4</Version>
+    <Version>0.1.7</Version>
     <Authors>Ronan Doherty</Authors>
     <PackageProjectUrl>https://github.com/rodoch/Schematic.BaseInfrastructure.Sqlite/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rodoch/Schematic.BaseInfrastructure.Sqlite/</RepositoryUrl>
@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="2.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.1" />
-    <PackageReference Include="Schematic.Core" Version="0.1.4" />
+    <PackageReference Include="Schematic.Core" Version="0.1.6" />
     <PackageReference Include="Schematic.Identity" Version="0.1.4" />
   </ItemGroup>
 

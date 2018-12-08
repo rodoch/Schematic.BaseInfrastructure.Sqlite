@@ -11,20 +11,17 @@ namespace Schematic.BaseInfrastructure.Sqlite
     public class CachedUserRoleRepository : UserRoleRepository, IUserRoleRepository<UserRole>
     {
         private readonly IMemoryCache _cache;
-        private readonly IUserCacheKeyService _cacheKeys;
 
         public CachedUserRoleRepository(
             IConfiguration configuration,
-            IMemoryCache cache,
-            IUserCacheKeyService cacheKeys) : base(configuration)
+            IMemoryCache cache) : base(configuration)
         {
             _cache = cache;
-            _cacheKeys = cacheKeys;
         }
 
         public new async Task<List<UserRole>> ListAsync()
         {
-            string cacheKey = _cacheKeys.GetUserRoleListCacheKey();
+            string cacheKey = CacheKeys.UserRoleListCacheKey;
 
             if (!_cache.TryGetValue(cacheKey, out List<UserRole> cacheEntry))
             {

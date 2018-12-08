@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Dapper;
 using Schematic.Core;
 using Schematic.Identity;
@@ -14,14 +15,14 @@ namespace Schematic.BaseInfrastructure.Sqlite
 {
     public class UserRepository : IUserRepository<User, UserFilter>
     {
-        private readonly ISchematicSettings _settings;
+        private readonly IOptionsMonitor<SchematicSettings> _settings;
         private readonly IUserRoleRepository<UserRole> _roleRepository;
         
         private readonly string _connectionString;
 
         public UserRepository(
             IConfiguration configuration,
-            ISchematicSettings settings,
+            IOptionsMonitor<SchematicSettings> settings,
             IUserRoleRepository<UserRole> roleRepository)
         {
             _settings = settings;
@@ -219,8 +220,9 @@ namespace Schematic.BaseInfrastructure.Sqlite
                 }
 
                 var timeCreated = DateTime.Parse(tokenResult.DateCreated);
+                var timeLimit = _settings.CurrentValue.SetPasswordTimeLimitHours;
 
-                if (timeCreated < DateTime.UtcNow.Subtract(TimeSpan.FromHours(_settings.SetPasswordTimeLimitHours)))
+                if (timeCreated < DateTime.UtcNow.Subtract(TimeSpan.FromHours(timeLimit)))
                 {
                     return TokenVerificationResult.Expired;
                 }
