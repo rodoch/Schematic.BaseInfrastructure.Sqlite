@@ -2,7 +2,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Dapper;
 using Schematic.Core;
 
@@ -12,9 +12,9 @@ namespace Schematic.BaseInfrastructure.Sqlite
     {
         private readonly string _connectionString;
 
-        public ImageAssetRepository(IConfiguration configuration)
+        public ImageAssetRepository(IOptionsMonitor<SchematicSettings> settings)
         {
-            _connectionString = configuration.GetConnectionString("Sqlite");
+            _connectionString = settings.CurrentValue.DataStore.ConnectionString;
         }
 
         public async Task<int> CreateAsync(ImageAsset asset, int userID)

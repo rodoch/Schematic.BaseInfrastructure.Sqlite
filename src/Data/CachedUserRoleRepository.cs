@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Schematic.Core;
 using Schematic.Identity;
 
@@ -13,8 +13,8 @@ namespace Schematic.BaseInfrastructure.Sqlite
         private readonly IMemoryCache _cache;
 
         public CachedUserRoleRepository(
-            IConfiguration configuration,
-            IMemoryCache cache) : base(configuration)
+            IOptionsMonitor<SchematicSettings> settings,
+            IMemoryCache cache) : base(settings)
         {
             _cache = cache;
         }

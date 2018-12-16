@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Dapper;
 using Schematic.Core;
 using Schematic.Identity;
@@ -14,13 +12,11 @@ namespace Schematic.BaseInfrastructure.Sqlite
 {
     public class UserRoleRepository : IUserRoleRepository<UserRole>
     {
-        protected readonly IConfiguration Configuration;
         protected readonly string ConnectionString;
 
-        public UserRoleRepository(IConfiguration configuration)
+        public UserRoleRepository(IOptionsMonitor<SchematicSettings> settings)
         {
-            Configuration = configuration;
-            ConnectionString = Configuration.GetConnectionString("Sqlite");
+            ConnectionString = settings.CurrentValue.DataStore.ConnectionString;
         }
 
         public async Task<List<UserRole>> ListAsync()

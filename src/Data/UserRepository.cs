@@ -4,30 +4,27 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Dapper;
 using Schematic.Core;
 using Schematic.Identity;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Schematic.BaseInfrastructure.Sqlite
 {
-    public class UserRepository : IUserRepository<User, UserFilter>
+    public class UserRepository : IUserRepository<User, UserFilter, UserSpecification>
     {
         private readonly IOptionsMonitor<SchematicSettings> _settings;
         private readonly IUserRoleRepository<UserRole> _roleRepository;
-        
         private readonly string _connectionString;
 
         public UserRepository(
-            IConfiguration configuration,
             IOptionsMonitor<SchematicSettings> settings,
             IUserRoleRepository<UserRole> roleRepository)
         {
             _settings = settings;
             _roleRepository = roleRepository;
-            _connectionString = configuration.GetConnectionString("Sqlite");
+            _connectionString = _settings.CurrentValue.DataStore.ConnectionString;
         }
 
         public async Task<int> CreateAsync(User resource, string token, int userID)
@@ -65,35 +62,52 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<User> ReadAsync(int id)
+        public async Task<User> ReadAsync(UserSpecification userSpecification)
         {
-            const string sql = @"SELECT * FROM Users WHERE ID = @ID;
-                SELECT r.ID FROM UserRoles AS r
+            var builder = new SqlBuilder();
+            var template = builder.AddTemplate(@"SELECT * FROM Users /**where**/;");
+
+            if (userSpecification.Email.HasValue())
+            {
+                builder.Where("Email = @Email", new { userSpecification.Email });
+            }
+            else
+            {
+                builder.Where("ID = @ID", new { userSpecification.ID });
+            }
+
+            const string roleSql = @"SELECT * FROM UserRoles ORDER BY DisplayTitle, Name;
+                SELECT r.ID FROM UserRoles AS r 
                 LEFT JOIN UsersUserRole AS ur ON ur.RoleID = r.ID 
                 WHERE ur.UserID = @ID;";
 
             using (var db = new SqliteConnection(_connectionString))
-            {
-                using (var multi = await db.QueryMultipleAsync(sql, new { ID = id }))
+            {   
+                var readUser = await db.QueryAsync<User>(template.RawSql, template.Parameters);
+                var user = readUser.FirstOrDefault();
+
+                if (user != null)
                 {
-                    var user = multi.Read<User>().FirstOrDefault();
-                    var userRoles = multi.Read<int>().ToList();
-                    var roles = await _roleRepository.ListAsync();
-
-                    foreach (var role in roles)
+                    using (var multi = await db.QueryMultipleAsync(roleSql, new { ID = user.ID }))
                     {
-                        role.HasRole = false;
+                        var roles = multi.Read<UserRole>().ToList();
+                        var userRoleIDs = multi.Read<int>();
+
+                        foreach (var role in roles)
+                        {
+                            role.HasRole = false;
+                        }
+
+                        foreach (int roleID in userRoleIDs)
+                        {
+                            roles.Find(r => r.ID == roleID).HasRole = true;
+                        }
+
+                        user.Roles = roles;
                     }
-
-                    foreach (int roleID in userRoles)
-                    {
-                        roles.Find(r => r.ID == roleID).HasRole = true;
-                    }
-
-                    user.Roles = roles;
-
-                    return user;
                 }
+
+                return user;
             }
         }
 
