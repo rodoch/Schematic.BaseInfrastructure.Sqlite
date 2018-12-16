@@ -111,40 +111,6 @@ namespace Schematic.BaseInfrastructure.Sqlite
             }
         }
 
-        public async Task<User> ReadByEmailAsync(string email)
-        {
-            const string userSql = @"SELECT * FROM Users WHERE Email = @Email";
-            const string roleSql = @"SELECT r.ID FROM UserRoles AS r 
-                LEFT JOIN UsersUserRole AS ur ON ur.RoleID = r.ID 
-                WHERE ur.UserID = @ID";
-
-            using (var db = new SqliteConnection(_connectionString))
-            {   
-                var readUser = await db.QueryAsync<User>(userSql, new { Email = email });
-                var user = readUser.FirstOrDefault();
-
-                if (user != null)
-                {
-                    var userRoles = await db.QueryAsync<int>(roleSql, new { ID = user.ID });
-                    var roles = await _roleRepository.ListAsync();
-
-                    foreach (var role in roles)
-                    {
-                        role.HasRole = false;
-                    }
-
-                    foreach (int roleID in userRoles)
-                    {
-                        roles.Find(r => r.ID == roleID).HasRole = true;
-                    }
-
-                    user.Roles = roles;
-                }
-
-                return user;
-            }
-        }
-
         public async Task<int> UpdateAsync(User resource, int userID)
         {
             const string sql = @"UPDATE Users 
