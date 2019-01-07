@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
+using Ansa.Extensions;
 using Dapper;
 using Schematic.Core;
 using Schematic.Identity;
@@ -149,7 +150,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
                 /**where**/
                 ORDER BY Forenames, Surnames, ID;");
 
-            if (filter.SearchQuery.HasValue())
+            if (filter.Query.HasValue())
             {
                 builder.OrWhere("Forenames LIKE @Query");
                 builder.OrWhere("Surnames LIKE @Query");
@@ -158,7 +159,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
             using (var db = new SqliteConnection(_connectionString))
             {
                 var users = await db.QueryAsync<User>(template.RawSql, 
-                    new { Query = filter.SearchQuery + "%" });
+                    new { Query = filter.Query + "%" });
                 return users.ToList();
             }
         }
