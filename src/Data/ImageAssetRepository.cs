@@ -20,7 +20,7 @@ namespace Schematic.BaseInfrastructure.Sqlite
         public async Task<int> CreateAsync(ImageAsset asset, int userID)
         {
             const string sql = @"INSERT INTO ImageAssets (FileName, ContentType, Height, Width, AltText, Title, DateCreated, CreatedBy) 
-                VALUES (@FileName, @ContentType, @Width, @Height, @AltText, @Title, @DateCreated, @CreatedBy);
+                VALUES (@FileName, @ContentType, @Height, @Width, @AltText, @Title, @DateCreated, @CreatedBy);
                 SELECT last_insert_rowid();";
 
             using (IDbConnection db = new SqliteConnection(_connectionString))
